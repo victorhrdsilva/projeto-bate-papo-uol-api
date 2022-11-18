@@ -103,6 +103,7 @@ app.post("/messages", async (req, res) => {
 
     });
 
+   
     const user = req.headers.user;
     let body = req.body;
     let newMessage = {
@@ -136,8 +137,16 @@ app.post("/messages", async (req, res) => {
 });
 
 app.get("/messages", async (req, res) => {
+    const limit = parseInt(req.query.limit);
+    const user = req.headers.user;
+
     try {
         const promisse = await db.collection("messages").find().toArray();
+        promisse = promisse.filter((item) => item.to == user || item.from == user || item.type == "message")
+        if (limit > 0) {
+            res.status(201).send(promisse.slice(limit));
+            return
+        }
         res.status(201).send(promisse);
     } catch (error) {
         res.sendStatus(500);
