@@ -20,20 +20,25 @@ mongoClient.connect().then(() => {
     db = mongoClient.db("bate-papo-uol");
 });
 
-const validaSchema = joi.object({
-    name: joi.any().valid('vic', 'Vou')
-})
-
-let valida = {
-    name: "vic"
-};
-
-const validation = validaSchema.validate(valida, { abortEarly: false });
-
-if (validation.error) {
-    const erros = validation.error.details.map((detail) => detail.message);
-    console.log(erros)
-}
+setInterval(async ()  => {
+    try {
+        const promisse = await db.collection("participants").find().toArray();
+        promisso.map((item) => {
+            if(item.lastStatus < (Date.now()-10000)) {
+                await db.collection("participants").deleteOne(item._id);
+                await db.collection("messages").insertOne({
+                    from: item.name, 
+                    to: 'Todos', 
+                    text: 'sai da sala...', 
+                    type: 'status', 
+                    time: dayjs().format("HH:mm:ss")
+                });
+            }
+        })
+    } catch (error) {
+        res.sendStatus(500);
+    }
+}, 15000)
 
 // USER MANIPULATION
 
@@ -148,6 +153,28 @@ app.get("/messages", async (req, res) => {
             return
         }
         res.status(201).send(promisse);
+    } catch (error) {
+        res.sendStatus(500);
+    }
+});
+
+// STATUS 
+
+app.post("/status", async (req, res) => {
+    const user = req.headers.user;
+    const findedUser = await db.collection("participants").find({name: newUser.name}).toArray();
+
+    if(findedUser.length == 0) {
+        res.status(404).send("Falha ao encontrar o usuário");
+        return;
+    }
+
+    try {
+        const promisse = await usersColection.updateOne({ 
+			name: user
+		}, { $set: {name: user, lastStatus: Date.now()} });
+
+        res.sendStatus(200);
     } catch (error) {
         res.sendStatus(500);
     }
