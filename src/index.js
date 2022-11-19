@@ -23,9 +23,10 @@ mongoClient.connect().then(() => {
 setInterval(async ()  => {
     try {
         const promisse = await db.collection("participants").find().toArray();
-        promisso.map((item) => {
+        promisse.map(async(item) => {
+            const id = item._id
             if(item.lastStatus < (Date.now()-10000)) {
-                await db.collection("participants").deleteOne(item._id);
+                await db.collection("participants").deleteOne({_id: id});
                 await db.collection("messages").insertOne({
                     from: item.name, 
                     to: 'Todos', 
@@ -36,7 +37,7 @@ setInterval(async ()  => {
             }
         })
     } catch (error) {
-        res.sendStatus(500);
+        console.log("erro")
     }
 }, 15000)
 
@@ -55,25 +56,25 @@ app.post("/", async (req, res) => {
     };
 
     const validation = nameSchema.validate(newUser, { abortEarly: false });
-    
+
     if (validation.error) {
         const erros = validation.error.details.map((detail) => detail.message);
         res.status(422).send(erros);
         return;
     }
-    
-    const isRepeatName = await db.collection("participants").find({name: newUser.name}).toArray();
 
-    if(isRepeatName.length > 0) {
+    const isRepeatName = await db.collection("participants").find({ name: newUser.name }).toArray();
+
+    if (isRepeatName.length > 0) {
         res.status(409).send("O nome de usuário já existe");
         return;
     }
 
     const message = {
-        from: newUser.name, 
-        to: 'Todos', 
-        text: 'entra na sala...', 
-        type: 'status', 
+        from: newUser.name,
+        to: 'Todos',
+        text: 'entra na sala...',
+        type: 'status',
         time: dayjs().format("HH:mm:ss")
     };
 
@@ -108,7 +109,7 @@ app.post("/messages", async (req, res) => {
 
     });
 
-   
+
     const user = req.headers.user;
     let body = req.body;
     let newMessage = {
@@ -118,16 +119,16 @@ app.post("/messages", async (req, res) => {
     };
 
     const validation = messageSchema.validate(newMessage, { abortEarly: false });
-    
+
     if (validation.error) {
         const erros = validation.error.details.map((detail) => detail.message);
         res.status(422).send(erros);
         return;
     }
-    
-    const isExistFrom = await db.collection("participants").find({name: user}).toArray();
 
-    if(isExistFrom.length === 0) {
+    const isExistFrom = await db.collection("participants").find({ name: user }).toArray();
+
+    if (isExistFrom.length === 0) {
         res.status(422).send("Usuário inexistente");
         return;
     }
@@ -143,16 +144,19 @@ app.post("/messages", async (req, res) => {
 
 app.get("/messages", async (req, res) => {
     const limit = parseInt(req.query.limit);
+    console.log(limit)
     const user = req.headers.user;
 
     try {
         const promisse = await db.collection("messages").find().toArray();
-        promisse = promisse.filter((item) => item.to == user || item.from == user || item.type == "message")
+        const messagesFromUser = promisse.filter((item) => {
+            return (item.to == user || item.from == user || item.type == "message" || item.type == "status")
+        })
         if (limit > 0) {
-            res.status(201).send(promisse.slice(limit));
+            res.status(201).send(messagesFromUser.slice(-limit));
             return
         }
-        res.status(201).send(promisse);
+        res.status(201).send(messagesFromUser);
     } catch (error) {
         res.sendStatus(500);
     }
@@ -162,18 +166,15 @@ app.get("/messages", async (req, res) => {
 
 app.post("/status", async (req, res) => {
     const user = req.headers.user;
-    const findedUser = await db.collection("participants").find({name: newUser.name}).toArray();
-
-    if(findedUser.length == 0) {
-        res.status(404).send("Falha ao encontrar o usuário");
-        return;
-    }
-
     try {
-        const promisse = await usersColection.updateOne({ 
-			name: user
-		}, { $set: {name: user, lastStatus: Date.now()} });
+        const findedUser = await db.collection("participants").find({ name: user }).toArray();
 
+        if (findedUser.length == 0) {
+            res.status(404).send("Falha ao encontrar o usuário");
+            return;
+        }
+
+        const promisse = await db.collection("participants").updateOne({ name: user }, { $set: { lastStatus: Date.now() }});;
         res.sendStatus(200);
     } catch (error) {
         res.sendStatus(500);
