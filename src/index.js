@@ -83,7 +83,7 @@ app.post("/", async (req, res) => {
         await db.collection("messages").insertOne(message);
         res.sendStatus(201);
     } catch (error) {
-        res.sendStatus(500);
+        res.status(500).send(error);
     }
 
 });
@@ -93,7 +93,7 @@ app.get("/participants", async (req, res) => {
         const promisse = await db.collection("participants").find().toArray();
         res.status(201).send(promisse);
     } catch (error) {
-        res.sendStatus(500);
+        res.status(500).send(error);
     }
 });
 
@@ -137,7 +137,7 @@ app.post("/messages", async (req, res) => {
         const promisse = await db.collection("messages").insertOne(newMessage);
         res.sendStatus(201);
     } catch (error) {
-        res.sendStatus(500);
+        res.status(500).send(error);
     }
 
 });
@@ -150,7 +150,7 @@ app.get("/messages", async (req, res) => {
     try {
         const promisse = await db.collection("messages").find().toArray();
         const messagesFromUser = promisse.filter((item) => {
-            return (item.to == user || item.from == user || item.type == "message" || item.type == "status")
+            return (item.to == user || item.from == user || item.type == "message" || item.to == "Todos")
         })
         if (limit > 0) {
             res.status(201).send(messagesFromUser.slice(-limit));
@@ -158,7 +158,7 @@ app.get("/messages", async (req, res) => {
         }
         res.status(201).send(messagesFromUser);
     } catch (error) {
-        res.sendStatus(500);
+        res.status(500).send(error);
     }
 });
 
@@ -177,7 +177,7 @@ app.post("/status", async (req, res) => {
         const promisse = await db.collection("participants").updateOne({ name: user }, { $set: { lastStatus: Date.now() }});;
         res.sendStatus(200);
     } catch (error) {
-        res.sendStatus(500);
+        res.status(500).send(error);
     }
 });
 
